@@ -6,7 +6,7 @@ on:
 
 env:
   NODE_VERSION: 12
-  WASM_PACK_VERSION: 0.12.1
+  WASM_PACK_VERSION: 0.13.1
 
 jobs:
   prerelease-stremio-core-web:
