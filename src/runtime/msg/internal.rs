@@ -1,10 +1,10 @@
-use crate::models::common::ResourceLoadable;
 use url::Url;
 
+use crate::models::common::ResourceLoadable;
 use crate::models::ctx::CtxError;
 use crate::models::link::LinkError;
 use crate::models::local_search::Searchable;
-use crate::models::streaming_server::{PlaybackDevice, StatisticsRequest};
+use crate::models::streaming_server::PlaybackDevice;
 use crate::runtime::EnvError;
 use crate::types::addon::{Descriptor, Manifest, ResourceRequest, ResourceResponse};
 use crate::types::api::{
@@ -14,11 +14,14 @@ use crate::types::api::{
 };
 use crate::types::library::{LibraryBucket, LibraryItem, LibraryItemId};
 use crate::types::profile::{Auth, AuthKey, Profile, User};
-use crate::types::resource::{MetaItem, Stream};
 use crate::types::streaming_server::{
-    DeviceInfo, GetHTTPSResponse, NetworkInfo, SettingsResponse, Statistics,
+    DeviceInfo, GetHTTPSResponse, NetworkInfo, SettingsResponse, Statistics, StatisticsRequest,
 };
 use crate::types::streams::StreamItemState;
+use crate::types::{
+    resource::{MetaItem, Stream},
+    torrent::InfoHash,
+};
 
 pub type CtxStorageResponse = (
     Option<Profile>,
@@ -46,12 +49,14 @@ pub enum Internal {
     AddonsAPIResult(APIRequest, Result<Vec<Descriptor>, CtxError>),
     /// Result for pull user from API.
     UserAPIResult(APIRequest, Result<User, CtxError>),
+    /// Result for deleting account from API.
+    DeleteAccountAPIResult(APIRequest, Result<SuccessResponse, CtxError>),
     /// Result for library sync plan with API.
     LibrarySyncPlanResult(DatastoreRequest, Result<LibraryPlanResponse, CtxError>),
     /// Result for pull library items from API.
     LibraryPullResult(DatastoreRequest, Result<Vec<LibraryItem>, CtxError>),
-    /// Dispatched when expired session is detected
-    Logout,
+    /// Dispatched when the user session needs to be cleared with a flag if the session was already deleted server-side
+    Logout(bool),
     /// Internal event dispatched on user action or login
     /// to install the addon if it's not present
     InstallTraktAddon,
@@ -86,6 +91,8 @@ pub enum Internal {
     StreamsChanged(bool),
     /// Search history has changed.
     SearchHistoryChanged,
+    /// Server URLs bucket has changed.
+    StreamingServerUrlsBucketChanged,
     /// User notifications have changed
     NotificationsChanged,
     /// Pulling of notifications triggered either by the user (with an action) or
@@ -112,7 +119,7 @@ pub enum Internal {
     /// Result for updating streaming server settings.
     StreamingServerUpdateSettingsResult(Url, Result<(), EnvError>),
     /// Result for creating a torrent.
-    StreamingServerCreateTorrentResult(String, Result<(), EnvError>),
+    StreamingServerCreateTorrentResult(InfoHash, Result<(), EnvError>),
     /// Result for playing on device.
     StreamingServerPlayOnDeviceResult(String, Result<(), EnvError>),
     // Result for get https endpoint request
